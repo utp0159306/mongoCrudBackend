@@ -24,5 +24,6 @@ const movieSchema = new mongoose.Schema({
   keywords: { type: [String] },
 }, { timestamps: true });
 
-const Movie = mongoose.model('Movie', movieSchema);
+const Movie = mongoose.model('Movie', movieSchema, 'movies');  // Especificamos la colección 'movies'
+
 module.exports = Movie;

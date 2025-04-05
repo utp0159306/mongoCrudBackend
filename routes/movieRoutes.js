@@ -2,37 +2,50 @@ const express = require('express');
 const router = express.Router();
 const Movie = require('../models/Movie');
 
-// CREATE: agregar una nueva película
-router.post('/', async (req, res) => {
+// CREATE (agregar una nueva película)
+router.post('/:id', async (req, res) => {
   try {
-    const newMovie = new Movie(req.body);
-    await newMovie.save();
-    res.status(201).json(newMovie);
+    const movie = new Movie(req.body);
+    const saved = await movie.save();
+    res.status(201).json(saved);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// READ ALL: obtener todas las películas
+// READ ALL (con paginación)
 router.get('/', async (req, res) => {
   try {
-    const movies = await Movie.find();
-    res.json(movies);
+    // Extraer parámetros de consulta (?page=1&limit=10)
+    const page = parseInt(req.query.page) || 1;      // Página actual
+    const limit = parseInt(req.query.limit) || 10;   // Cuántos por página
+    const skip = (page - 1) * limit;
+
+    // Contar el total de documentos (opcional)
+    const total = await Movie.countDocuments();
+
+    // Obtener los documentos paginados
+    const movies = await Movie.find()
+      .skip(skip)
+      .limit(limit)
+      .sort({ release_date: -1 }); // orden opcional
+
+    res.json({
+      page,
+      totalPages: Math.ceil(total / limit),
+      totalMovies: total,
+      results: movies
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Error al obtener las películas' });
   }
 });
 
-// READ ONE: obtener una película por ID de Mongo (_id) o id numérico
+// READ ONE
 router.get('/:id', async (req, res) => {
-  try {
-    // Buscar por el campo 'id' personalizado, no el _id de Mongo
-    const movie = await Movie.findOne({ id: parseInt(req.params.id) });
-    if (!movie) return res.status(404).json({ error: 'Película no encontrada' });
-    res.json(movie);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const movie = await Movie.findOne({ id: req.params.id });
+  if (!movie) return res.status(404).json({ error: 'Película no encontrada' });
+  res.json(movie);
 });
 
 // UPDATE: actualizar película por su id (campo personalizado)
